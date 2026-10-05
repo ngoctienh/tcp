@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<!-- saved from url=(0045)https://vqhungnew.github.io/WebRTC/index.html -->
+<html lang="vi">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+    <meta name="tienho" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC &amp; Network Protocol Lab: Hồ Ngọc Tiến - Client/Server SDP Architecture</title>
+    <style>
+         :root {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --accent-blue: #38bdf8;
+            --accent-green: #22c55e;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #a855f7;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            background-color: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 7rem 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .header-sub {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+        
+        .cat-image {
+            width: 72px;
+            height: 72px;
+            object-fit: cover;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            right: 2rem;
+            transform: translateY(-50%);
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            background-color: var(--bg-main);
+            padding: 0.75rem 2rem 0;
+            border-bottom: 1px solid var(--border-color);
+            overflow-x: auto;
+        }
+        
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.75rem 1.25rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .tab-btn:hover {
+            color: var(--text-main);
+        }
+        
+        .tab-btn.active {
+            color: var(--accent-blue);
+            border-bottom-color: var(--accent-blue);
+            background-color: rgba(56, 189, 248, 0.05);
+            border-radius: 6px 6px 0 0;
+        }
+        
+        main {
+            flex: 1;
+            padding: 1.5rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+        
+        @media (max-width: 900px) {
+            .grid-2,
+            .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .badge {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .badge-blue {
+            background-color: rgba(56, 189, 248, 0.2);
+            color: var(--accent-blue);
+        }
+        
+        .badge-green {
+            background-color: rgba(34, 197, 94, 0.2);
+            color: var(--accent-green);
+        }
+        
+        .badge-amber {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: var(--accent-amber);
+        }
+        
+        .badge-purple {
+            background-color: rgba(168, 85, 247, 0.2);
+            color: var(--accent-purple);
+        }
+        
+        .btn {
+            background-color: var(--accent-blue);
+            color: #000;
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+        
+        .btn-secondary {
+            background-color: #334155;
+            color: var(--text-main);
+        }
+        
+        .btn-success {
+            background-color: var(--accent-green);
+            color: #000;
+        }
+        
+        .btn-block {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        textarea,
+        input[type="text"] {
+            width: 100%;
+            background-color: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.75rem;
+            color: var(--text-main);
+            font-family: monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+        }
+        
+        textarea:focus,
+        input[type="text"]:focus {
+            outline: 1px solid var(--accent-blue);
+        }
+        
+        .chat-box {
+            height: 260px;
+            overflow-y: auto;
+            background-color: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .chat-msg {
+            max-width: 80%;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            position: relative;
+        }
+        
+        .chat-msg.sent {
+            align-self: flex-end;
+            background-color: #0284c7;
+            color: #fff;
+        }
+        
+        .chat-msg.received {
+            align-self: flex-start;
+            background-color: #334155;
+            color: var(--text-main);
+        }
+        
+        .chat-msg .proto-tag {
+            font-size: 0.65rem;
+            font-weight: 700;
+            opacity: 0.8;
+            margin-bottom: 0.2rem;
+            display: block;
+        }
+        
+        .chat-msg .time-tag {
+            font-size: 0.65rem;
+            opacity: 0.6;
+            text-align: right;
+            margin-top: 0.2rem;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        
+        @media (max-width: 600px) {
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        .metric-card {
+            background-color: #0f172a;
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .metric-val {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin-top: 0.25rem;
+        }
+        
+        .metric-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        
+        .log-box {
+            height: 140px;
+            overflow-y: auto;
+            background-color: #090d16;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #38bdf8;
+        }
+        
+        .log-line {
+            margin-bottom: 0.25rem;
+            word-break: break-all;
+        }
+        
+        .env-guide {
+            background-color: rgba(56, 189, 248, 0.05);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .env-guide h4 {
+            color: var(--accent-blue);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .env-guide ol {
+            margin-left: 1.25rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        
+        .sdp-item {
+            background-color: #0f172a;
+            border-left: 3px solid var(--accent-blue);
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.5rem;
+            font-family: monospace;
+            font-size: 0.8rem;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .sdp-key {
+            color: var(--accent-amber);
+            font-weight: bold;
+        }
+        
+        .sdp-desc {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-top: 0.2rem;
+            font-family: sans-serif;
+        }
+        
+        .flow-step {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            background-color: #0f172a;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .step-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: var(--accent-blue);
+            color: #000;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+        
+        .step-text h5 {
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+        
+        .step-text p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.1rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-title">🌐 WebRTC &amp; Hồ Ngọc tiến :Network Protocol Lab</div>
+        <div class="header-sub">Mô hình Truyền nhận P2P Real-Time, Phân tích SDP &amp; So sánh TCP vs UDP trên Trình Duyệt Web</div>
+        <img class="cat-image" src="https://recmiennam.com/wp-content/uploads/2018/01/anh-meo-de-thuong-2.jpg" alt="Mèo dễ thương">
+    </header>
+    <nav class="nav-tabs">
+
+        <button class="tab-btn" onclick="switchTab('tab1', event)">1. Kiến Trúc &amp; Phân Tách SDP</button>
+        <button class="tab-btn active" onclick="switchTab('tab2', event)">2. Phòng Thực Hành P2P Chat</button>
+        <button class="tab-btn" onclick="switchTab('tab3', event)">3. Cơ Chế Signaling Tự Động Trong Thực Tế</button>
+    </nav>
+
+    <main>
+        <!-- TAB 1: ARCHITECTURE & SDP INSPECTOR -->
+        <div id="tab1" class="tab-content">
+            <div class="grid-2">
+                <div>
+                    <div class="card">
+                        <div class="card-title">
+                            <span>Sơ Đồ Truyền Nhận SDP &amp; ICE Candidates</span>
+                            <span class="badge badge-blue">WebRTC Architecture</span>
+                        </div>
+                        <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.5;">
+                            WebRTC yêu cầu hai Peer trao đổi thông số cấu hình mạng (SDP) và địa chỉ IP/Port khả thi (ICE Candidates) trước khi thiết lập đường truyền DataChannel P2P trực tiếp.
+                        </p>
+                        <div class="flow-step">
+                            <div class="step-num">1</div>
+                            <div class="step-text">
+                                <h5>Peer A khởi tạo OFFER (SDP)</h5>
+                                <p>Khởi tạo RTCPeerConnection &amp; DataChannel. Thu thập các giao thức mã hóa &amp; Capabilities.</p>
+                            </div>
+                        </div>
+                        <div class="flow-step">
+                            <div class="step-num">2</div>
+                            <div class="step-text">
+                                <h5>Thu thập ICE Candidates (IP / Port)</h5>
+                                <p>Trình duyệt tự dò tìm IP LAN (Localhost/Wifi IP) để gắn kèm vào mã SDP.</p>
+                            </div>
+                        </div>
+                        <div class="flow-step">
+                            <div class="step-num">3</div>
+                            <div class="step-text">
+                                <h5>Chuyển giao Signal (Signaling Channel)</h5>
+                                <p>Đoạn Text SDP được chuyển sang Peer B (Qua Copy-Paste thủ công hoặc Signaling Server).</p>
+                            </div>
+                        </div>
+                        <div class="flow-step">
+                            <div class="step-num">4</div>
+                            <div class="step-text">
+                                <h5>Peer B phản hồi ANSWER (SDP)</h5>
+                                <p>Peer B nhận Offer, cấu hình Remote Description và gửi lại Answer SDP cho Peer A.</p>
+                            </div>
+                        </div>
+                        <div class="flow-step">
+                            <div class="step-num" style="background-color: var(--accent-green);">5</div>
+                            <div class="step-text">
+                                <h5>Kết Nối P2P Trực Tiếp (Established)</h5>
+                                <p>Kênh SCTP DataChannel mở ra. Dữ liệu truyền trực tiếp giữa 2 máy KHÔNG đi qua server nữa.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="card">
+                        <div class="card-title">
+                            <span>Interactive SDP Inspector (Phân Bóc SDP)</span>
+                            <span class="badge badge-purple">Parser Tool</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                            Dán đoạn mã SDP (Offer/Answer) vào ô bên dưới để soi trực quan các thông số tầng Transport &amp; Application:
+                        </p>
+                        <textarea id="sdpInspectorInput" rows="4" placeholder="Dán chuỗi Signal SDP tại đây để phân tích..." oninput="parseSDP()"></textarea>
+
+                        <div id="sdpParsedResult" style="margin-top: 1rem;">
+                            <div class="sdp-item">
+                                <div class="sdp-key">Chưa có dữ liệu SDP</div>
+                                <div class="sdp-desc">Hãy copy đoạn SDP từ Tab 2 dán vào đây để xem phân tích chi tiết từng thuộc tính mạng.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <p>==&gt; Link tham khảo thêm về WebRTC
+                    <br>1. <a href="https://www.youtube.com/watch?v=FExZvpVvYxA&amp;t=12s">https://www.youtube.com/watch?v=FExZvpVvYxA&amp;t=12s</a>
+                    <br>2. <a href="https://www.youtube.com/watch?v=2Z2PDsqgJP8">https://www.youtube.com/watch?v=2Z2PDsqgJP8</a>
+                </p>
+            </div>
+        </div>
+
+        <!-- TAB 2: P2P CHAT LAB -->
+        <div id="tab2" class="tab-content active">
+            <div class="env-guide">
+                <h4>📌 Hướng Dẫn Thực Hành Trong 2 Môi Trường</h4>
+                <div class="grid-2" style="gap: 1rem; margin-top: 0.5rem;">
+                    <div>
+                        <strong style="color: var(--accent-blue); font-size: 0.85rem;">Trường hợp 1: Chạy trên 2 Tab (Localhost)</strong>
+                        <ol>
+                            <li>LƯU Ý: Cần có Webserver để thực hành ==&gt; xem Cài WebServer trên VSCode tại link này nhé https://www.youtube.com/watch?v=E2sRb9kjHaM .</li>
+                            <li>Mở trang này trên 2 Tab trình duyệt riêng biệt (Tab A và Tab B).</li>
+                            <li>Trên <b>Tab A</b>: Bấm <b>1. Tạo OFFER Signal</b> $\rightarrow$ Copy mã trong khung.</li>
+                            <li>Trên <b>Tab B</b>: Dán vào khung Signal Nhận $\rightarrow$ Bấm <b>2. Chấp Nhận &amp; Kết Nối</b>.</li>
+                            <li>Copy mã ANSWER vừa xuất hiện ở Tab B dán ngược lại khung Signal Nhận của <b>Tab A</b> $\rightarrow$ Bấm Kết Nối.</li>
+                        </ol>
+                    </div>
+                    <div>
+                        <strong style="color: var(--accent-green); font-size: 0.85rem;">Trường hợp 2: Chạy trên 2 Máy tính (Mạng LAN Wifi)</strong>
+                        <ol>
+                            <li>Mở file HTML này trên Máy A và Máy B (cùng nối 1 Wifi/Router LAN). Máy A &amp; B cùng truy cập vào link https://vqhungnew.github.io/WebRTC/index.html </li>
+                            <li>Làm quy trình gửi Signal tương tự như trên qua <b>Zalo/Messenger/Email</b>.</li>
+                            <li><b>LƯU Ý QUAN TRỌNG:</b> Sau khi bấm "Tạo OFFER", cần <b>chờ 2-3 giây</b> để trình duyệt quét địa chỉ IP LAN (ICE Candidates) trước khi copy gửi đi!</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <!-- SIGNALING CONTROLS -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>1. Trao Đổi Signal (Handshake)</span>
+                        <span id="connStatus" class="badge badge-amber">Chưa kết nối</span>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">Mã Signal Của Bạn (Gửi cho đối phương):</label>
+                        <textarea id="localSignal" rows="4" readonly="" placeholder="Bấm nút 'Tạo OFFER' bên dưới để sinh mã..."></textarea>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                            <button class="btn btn-block" onclick="createOffer()">1. Tạo OFFER Signal</button>
+                            <button class="btn btn-secondary" onclick="copyLocalSignal()">Copy Signal</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">Nhập Signal Từ Đối Phương:</label>
+                        <textarea id="remoteSignal" rows="4" placeholder="Dán mã OFFER hoặc ANSWER từ máy đối phương vào đây..."></textarea>
+                        <button class="btn btn-success btn-block" style="margin-top: 0.5rem;" onclick="processRemoteSignal()">2. Chấp Nhận &amp; Kết Nối (Accept Signal)</button>
+                    </div>
+                </div>
+
+                <!-- P2P COMMUNICATION LAB -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>2. Truyền Nhận Dữ Liệu P2P</span>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button id="btnTCP" class="btn btn-secondary" style="border: 1px solid var(--accent-blue);" onclick="setProtocol('TCP')">TCP-like (Reliable)</button>
+                            <button id="btnUDP" class="btn btn-secondary" onclick="setProtocol('UDP')">UDP-like (Unreliable)</button>
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-label">Giao Thức</div>
+                            <div id="metricProto" class="metric-val" style="color: var(--accent-blue);">TCP</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Độ Trễ RTT</div>
+                            <div id="metricRTT" class="metric-val">-- ms</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Gói Đã Gửi</div>
+                            <div id="metricSent" class="metric-val">0</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Gói Đã Nhận</div>
+                            <div id="metricRecv" class="metric-val">0</div>
+                        </div>
+                    </div>
+
+                    <div class="chat-box" id="chatBox">
+                        <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin: auto;">
+                            Chờ kết nối P2P hoàn tất để bắt đầu gửi tin nhắn...
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                        <input type="text" id="msgInput" placeholder="Nhập tin nhắn..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+                        <button class="btn" onclick="sendChatMessage()">Gửi</button>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-secondary btn-block" onclick="sendBurstStream()">🚀 Test Gửi Chuỗi Burst Stream (10 gói/s)</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <span>Nhật Ký Sự Kiện Hệ Thống &amp; WebRTC Stats Log</span>
+                    <button class="btn btn-secondary" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;" onclick="clearLogs()">Xóa Log</button>
+                </div>
+                <div class="log-box" id="sysLogs"></div>
+            </div>
+        </div>
+
+        <!-- TAB 3: AUTOMATED SIGNALING IN REAL-WORLD -->
+        <div id="tab3" class="tab-content">
+            <div class="card">
+                <div class="card-title">
+                    <span>Mô Hình Signaling Tự Động Trong Thực Tế (Google Meet, Zalo, Zoom)</span>
+                    <span class="badge badge-green">Production Architecture</span>
+                </div>
+                <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1.5rem;">
+                    Trong ứng dụng thực tế, người dùng <b>KHÔNG BAO GIỜ</b> phải copy-paste mã SDP thủ công. Quá trình này được tự động hóa 100% thông qua <b>Signaling Server</b> (thường chạy Socket.IO / WebSocket / Firebase).
+                </p>
+
+                <div class="grid-2" style="margin-bottom: 1.5rem;">
+                    <div style="background-color: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <h4 style="color: var(--accent-amber); font-size: 0.95rem; margin-bottom: 0.5rem;">Thực Hành Bài Lab (Manual Signaling)</h4>
+                        <ul style="font-size: 0.85rem; color: var(--text-muted); margin-left: 1.25rem; line-height: 1.5;">
+                            <li>Người dùng tự copy-paste chuỗi Text SDP.</li>
+                            <li><b>Ưu điểm:</b> Giúp sinh viên soi rõ nội dung SDP, không cần cài đặt Node.js/Backend Server.</li>
+                            <li><b>Mục đích:</b> Hiểu rõ bản chất cơ chế Bắt tay (Handshake).</li>
+                        </ul>
+                    </div>
+
+                    <div style="background-color: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <h4 style="color: var(--accent-green); font-size: 0.95rem; margin-bottom: 0.5rem;">Ứng Dụng Thực Tế (Automated Signaling)</h4>
+                        <ul style="font-size: 0.85rem; color: var(--text-muted); margin-left: 1.25rem; line-height: 1.5;">
+                            <li>Client tự động phát sự kiện <code>socket.emit('offer', sdp)</code>.</li>
+                            <li>Signaling Server chuyển tiếp SDP đến Peer B trong &lt; 10ms.</li>
+                            <li>Mọi quá trình kết nối P2P diễn ra ngầm ngay khi người dùng bấm nút "Gọi" hoặc "Vào Phòng".</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h4 style="font-size: 1rem; color: var(--accent-blue); margin-bottom: 0.75rem;">Sơ Đồ Luồng Tự Động Qua WebSocket Signaling Server:</h4>
+                <div style="background-color: #090d16; padding: 1.25rem; border-radius: 8px; border: 1px solid var(--border-color); font-family: monospace; font-size: 0.8rem; color: #38bdf8; overflow-x: auto; line-height: 1.6;">
+                    Peer A (Browser 1) Signaling Server (Node.js/WebSocket) Peer B (Browser 2)<br> &nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|
+                    <br> &nbsp;&nbsp;&nbsp;&nbsp;|--- 1. emit('offer', SDP) --------&gt;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>                    &nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|--- 2. send('offer',
+                    SDP) --------&gt;|<br> &nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|
+                    <br> &nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&lt;-- 3.
+                    emit('answer', SDP) --------|<br> &nbsp;&nbsp;&nbsp;&nbsp;|&lt;-- 4. send('answer', SDP) -------|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>                    &nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|
+                    <br> &nbsp;&nbsp;&nbsp;&nbsp;|=== 5. KẾT NỐI P2P TRỰC TIẾP ĐƯỢC THIẾT LẬP (WebRTC DataChannel) ======|<br> &nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Data Chat/Audio/Video KHÔNG đi qua Signaling Server) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|
+                </div>
+
+                <div style="margin-top: 1.5rem; background-color: rgba(34, 197, 94, 0.05); border: 1px solid rgba(34, 197, 94, 0.2); padding: 1rem; border-radius: 8px;">
+                    <h4 style="color: var(--accent-green); font-size: 0.95rem; margin-bottom: 0.5rem;">🗣 LƯU Ý:</h4>
+                    <p style="font-size: 0.875rem; color: var(--text-main); line-height: 1.6; font-style: italic;">
+                        "Trong bài thực hành này, SV đóng vai trò làm Signaling Server thủ công bằng cách copy-paste dòng mã SDP. Trong thực tế (như khi mở Google Meet), trình duyệt sẽ tự động gửi các dòng SDP này qua kết nối WebSocket lên server trong khoảng 0.05 giây. Ngay
+                        khi hai máy 'bắt tay' xong, luồng tin nhắn và video sẽ xả trực tiếp P2P giữa hai thiết bị mà không đi qua server nữa."
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // --- GLOBAL VARIABLES & STATE ---
+        let pc = null;
+        let tcpChannel = null;
+        let udpChannel = null;
+        let selectedProtocol = 'TCP';
+        let sentCount = 0;
+        let recvCount = 0;
+        let isInitiator = false;
+
+        // --- TAB NAVIGATION ---
+        function switchTab(tabId, evt) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            if (evt && evt.currentTarget) {
+                evt.currentTarget.classList.add('active');
+            }
+        }
+
+        // --- LOGGING UTILITY ---
+        function log(msg, type = 'info') {
+            const logs = document.getElementById('sysLogs');
+            if (!logs) return;
+            const time = new Date().toLocaleTimeString();
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            let color = '#38bdf8';
+            if (type === 'err') color = '#ef4444';
+            if (type === 'warn') color = '#f59e0b';
+            if (type === 'success') color = '#22c55e';
+
+            line.innerHTML = `<span style="color: #64748b;">[${time}]</span> <span style="color: ${color}">${msg}</span>`;
+            logs.appendChild(line);
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        function clearLogs() {
+            const logs = document.getElementById('sysLogs');
+            if (logs) logs.innerHTML = '';
+        }
+
+        // --- WEBRTC SETUP ---
+        function initPeerConnection() {
+            const config = {
+                iceServers: [{
+                    urls: 'stun:stun.l.google.com:19302'
+                }]
+            };
+            pc = new RTCPeerConnection(config);
+
+            pc.onicecandidate = (e) => {
+                if (e.candidate) {
+                    log(`[ICE Candidate] Tìm thấy Candidate IP: ${e.candidate.candidate.split(' ')[4] || 'LAN'}`);
+                } else {
+                    log('[ICE Gathering] Đã thu thập xong toàn bộ ICE Candidates!', 'success');
+                    document.getElementById('localSignal').value = JSON.stringify(pc.localDescription);
+                }
+            };
+
+            pc.onconnectionstatechange = () => {
+                log(`[Connection State] Trạng thái kết nối: ${pc.connectionState}`);
+                const statusBadge = document.getElementById('connStatus');
+                if (pc.connectionState === 'connected') {
+                    statusBadge.textContent = 'Đã kết nối P2P';
+                    statusBadge.className = 'badge badge-green';
+                    startRTTMeasurement();
+                } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+                    statusBadge.textContent = 'Mất kết nối';
+                    statusBadge.className = 'badge badge-amber';
+                }
+            };
+
+            pc.ondatachannel = (e) => {
+                const channel = e.channel;
+                setupDataChannelEvents(channel);
+            };
+        }
+
+        function setupDataChannelEvents(channel) {
+            if (channel.label === 'tcp-channel') tcpChannel = channel;
+            if (channel.label === 'udp-channel') udpChannel = channel;
+
+            channel.onopen = () => {
+                log(`[DataChannel] Kênh '${channel.label}' đã MỞ sẵn sàng truyền dữ liệu!`, 'success');
+            };
+
+            channel.onmessage = (e) => {
+                recvCount++;
+                document.getElementById('metricRecv').textContent = recvCount;
+                const data = JSON.parse(e.data);
+
+                if (data.type === 'ping') {
+                    channel.send(JSON.stringify({
+                        type: 'pong',
+                        timestamp: data.timestamp
+                    }));
+                    return;
+                }
+                if (data.type === 'pong') {
+                    const rtt = Date.now() - data.timestamp;
+                    document.getElementById('metricRTT').textContent = `${rtt} ms`;
+                    return;
+                }
+
+                renderChatMessage(data.sender || 'Đối phương', data.text, data.proto, 'received', data.time);
+            };
+        }
+
+        async function createOffer() {
+            initPeerConnection();
+            isInitiator = true;
+
+            // Create TCP-like DataChannel (Reliable & Ordered)
+            tcpChannel = pc.createDataChannel('tcp-channel', {
+                ordered: true
+            });
+            setupDataChannelEvents(tcpChannel);
+
+            // Create UDP-like DataChannel (Unreliable & Unordered)
+            udpChannel = pc.createDataChannel('udp-channel', {
+                ordered: false,
+                maxRetransmits: 0
+            });
+            setupDataChannelEvents(udpChannel);
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            log('[Handshake] Đã khởi tạo OFFER SDP. Đang chờ thu thập ICE Candidates...');
+        }
+
+        async function processRemoteSignal() {
+            const remoteText = document.getElementById('remoteSignal').value.trim();
+            if (!remoteText) return alert('Vui lòng dán mã Signal từ đối phương!');
+
+            try {
+                const signal = JSON.parse(remoteText);
+                if (!pc) initPeerConnection();
+
+                await pc.setRemoteDescription(new RTCSessionDescription(signal));
+                log(`[Handshake] Đã nhận ${signal.type.toUpperCase()} từ đối phương.`);
+
+                if (signal.type === 'offer') {
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+                    log('[Handshake] Đã sinh ANSWER SDP. Hãy copy ô Signal truyền lại cho Peer A!');
+                }
+            } catch (err) {
+                log(`[Lỗi Signal] Mã SDP không hợp lệ: ${err.message}`, 'err');
+            }
+        }
+
+        function copyLocalSignal() {
+            const text = document.getElementById('localSignal');
+            if (!text.value) return alert('Chưa có mã Signal để copy!');
+            text.select();
+            document.execCommand('copy');
+            alert('Đã copy mã Signal vào Clipboard!');
+        }
+
+        // --- PROTOCOL SWITCHING & DATA TRANSFER ---
+        function setProtocol(proto) {
+            selectedProtocol = proto;
+            document.getElementById('metricProto').textContent = proto;
+            document.getElementById('btnTCP').style.border = proto === 'TCP' ? '1px solid var(--accent-blue)' : 'none';
+            document.getElementById('btnUDP').style.border = proto === 'UDP' ? '1px solid var(--accent-blue)' : 'none';
+            log(`[Protocol] Đã chuyển đổi giao thức ưu tiên sang: ${proto}-like Mode`);
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('msgInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const activeChannel = selectedProtocol === 'TCP' ? tcpChannel : udpChannel;
+            if (!activeChannel || activeChannel.readyState !== 'open') {
+                return alert('Chưa thiết lập kết nối P2P! Hãy thực hiện Handshake ở bước 1.');
+            }
+
+            const time = new Date().toLocaleTimeString();
+            const payload = {
+                type: 'chat',
+                text,
+                proto: selectedProtocol,
+                time,
+                sender: 'Bạn'
+            };
+            activeChannel.send(JSON.stringify(payload));
+
+            sentCount++;
+            document.getElementById('metricSent').textContent = sentCount;
+            renderChatMessage('Bạn', text, selectedProtocol, 'sent', time);
+            input.value = '';
+        }
+
+        function renderChatMessage(sender, text, proto, type, time) {
+            const chatBox = document.getElementById('chatBox');
+            const msgEl = document.createElement('div');
+            msgEl.className = `chat-msg ${type}`;
+            msgEl.innerHTML = `
+        <span class="proto-tag">[${proto}] ${sender}</span>
+        <div>${text}</div>
+        <div class="time-tag">${time}</div>
+      `;
+            chatBox.appendChild(msgEl);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function sendBurstStream() {
+            const activeChannel = selectedProtocol === 'TCP' ? tcpChannel : udpChannel;
+            if (!activeChannel || activeChannel.readyState !== 'open') {
+                return alert('Chưa kết nối P2P!');
+            }
+
+            log(`[Burst Stream] Đang phát chuỗi 10 gói tin liên tiếp qua ${selectedProtocol}...`, 'warn');
+            for (let i = 1; i <= 10; i++) {
+                setTimeout(() => {
+                    const time = new Date().toLocaleTimeString();
+                    const payload = {
+                        type: 'chat',
+                        text: `Gói tin Packet #${i} (Burst)`,
+                        proto: selectedProtocol,
+                        time,
+                        sender: 'Bạn'
+                    };
+                    activeChannel.send(JSON.stringify(payload));
+                    sentCount++;
+                    document.getElementById('metricSent').textContent = sentCount;
+                    renderChatMessage('Bạn', `Gói tin Packet #${i} (Burst)`, selectedProtocol, 'sent', time);
+                }, i * 100);
+            }
+        }
+
+        function startRTTMeasurement() {
+            setInterval(() => {
+                const activeChannel = selectedProtocol === 'TCP' ? tcpChannel : udpChannel;
+                if (activeChannel && activeChannel.readyState === 'open') {
+                    activeChannel.send(JSON.stringify({
+                        type: 'ping',
+                        timestamp: Date.now()
+                    }));
+                }
+            }, 2000);
+        }
+
+        // --- SDP PARSER FOR TAB 1 ---
+        function parseSDP() {
+            const raw = document.getElementById('sdpInspectorInput').value.trim();
+            const container = document.getElementById('sdpParsedResult');
+            container.innerHTML = '';
+
+            if (!raw) {
+                container.innerHTML = '<div class="sdp-item"><div class="sdp-key">Chưa có dữ liệu</div><div class="sdp-desc">Hãy dán mã SDP vào ô trên.</div></div>';
+                return;
+            }
+
+            let sdpText = raw;
+            try {
+                const obj = JSON.parse(raw);
+                if (obj.sdp) sdpText = obj.sdp;
+            } catch (e) {}
+
+            const lines = sdpText.split('\n');
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line) return;
+
+                let key = line.substring(0, 2);
+                let val = line.substring(2);
+                let desc = 'Thông số cấu hình WebRTC';
+
+                if (key === 'v=') desc = 'SDP Protocol Version (Phiên bản giao thức SDP)';
+                else if (key === 'o=') desc = 'Origin / Session Identifier (ID phiên làm việc & thông tin Originator)';
+                else if (key === 'c=') desc = 'Connection Data (Thông tin địa chỉ IP kết nối)';
+                else if (key === 'm=') desc = 'Media / Application Description (Khai báo cổng Port & Giao thức tầng Transport - SCTP/UDP)';
+                else if (line.startsWith('a=candidate')) desc = 'ICE Candidate: Địa chỉ IP LAN/Public & Port thực tế thu thập được';
+                else if (line.startsWith('a=sctp-port')) desc = 'SCTP Port: Cổng truyền dữ liệu P2P DataChannel';
+
+                const item = document.createElement('div');
+                item.className = 'sdp-item';
+                item.innerHTML = `<div class="sdp-key">${line.substring(0, 30)}${line.length > 30 ? '...' : ''}</div><div class="sdp-desc">↳ ${desc}</div>`;
+                container.appendChild(item);
+            });
+        }
+    </script>
+
+
+</body>
+
+</html>
